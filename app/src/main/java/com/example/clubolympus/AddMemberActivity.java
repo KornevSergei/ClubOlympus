@@ -14,6 +14,8 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
 
+import com.example.clubolympus.data.ClubOlympusContract;
+
 import java.util.ArrayList;
 
 public class AddMemberActivity extends AppCompatActivity {
@@ -64,14 +66,14 @@ public class AddMemberActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String selectedGender = (String) parent.getItemAtPosition(position);
-                //проверяем на пустоту,если не пустая то тогда выполняем присваивание
+                //проверяем на пустоту,если не пустая то тогда выполняем присваивание из отдельного класса
                 if (!TextUtils.isEmpty(selectedGender)) {
                     if (selectedGender.equals("Мужской")) {
-                        gender = 1;
+                        gender = ClubOlympusContract.MemberEntry.GENDER_MALE;
                     } else if (selectedGender.equals("Женский")) {
-                        gender = 2;
+                        gender = ClubOlympusContract.MemberEntry.GENDER_FEMALE;
                     } else {
-                        gender = 0;
+                        gender = ClubOlympusContract.MemberEntry.GENDER_UNKNOWN;
                     }
                 }
             }
@@ -79,8 +81,8 @@ public class AddMemberActivity extends AppCompatActivity {
             //когда никакой элемент не выбран
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
-                //если пусто выбираем по умолчанию значение
-                gender = 0;
+                //если пусто выбираем по умолчанию значение из отдельного класса
+                gender = ClubOlympusContract.MemberEntry.GENDER_UNKNOWN;
             }
         });
     }

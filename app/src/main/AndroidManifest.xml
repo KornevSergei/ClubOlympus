@@ -17,6 +17,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+<!--        Доаляем провайдер-->
+        <provider
+            android:authorities="com.example.clubolympus.data"
+            android:name=".data.OlympusContentProvider"
+            android:exported="false"/>
+        
     </application>
 
 </manifest>
