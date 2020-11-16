@@ -4,6 +4,9 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NavUtils;
 
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.Menu;
@@ -13,6 +16,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.Toast;
 
 import com.example.clubolympus.data.ClubOlympusContract;
 
@@ -23,7 +27,7 @@ public class AddMemberActivity extends AppCompatActivity {
     //переменные для связываения элементов разметки
     private EditText firstNameEditText;
     private EditText lastNameEditText;
-    private EditText groupEditText;
+    private EditText sportEditText;
     private Spinner genderSpinner;
     //переменная для полня пола, если 0 неизвестиен, если 1 мужской, 2 - женский
     private int gender = 0;
@@ -40,7 +44,7 @@ public class AddMemberActivity extends AppCompatActivity {
         //связываем с разметкой
         firstNameEditText = findViewById(R.id.firstNameEditText);
         lastNameEditText = findViewById(R.id.lastNameEditText);
-        groupEditText = findViewById(R.id.groupEditText);
+        sportEditText = findViewById(R.id.sportEditText);
         genderSpinner = findViewById(R.id.genderSpinner);
 
 //        //для динамического добавления используем этот код
@@ -100,6 +104,8 @@ public class AddMemberActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         switch (item.getItemId()) {
             case R.id.save_member:
+                //ызываем метод при нажатии на кнопку сохранить
+                insertMember();
                 return true;
             case R.id.delete_member:
                 return true;
@@ -110,5 +116,32 @@ public class AddMemberActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    //вставляем в таблицу новового члена
+    private void insertMember() {
+        //получаем значение столбцов, обрезаем пробелы
+        String firstName = firstNameEditText.getText().toString().trim();
+        String lastName = lastNameEditText.getText().toString().trim();
+        String sport = sportEditText.getText().toString().trim();
+
+        //создаем обьект и помещаем в него контекнт
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(ClubOlympusContract.MemberEntry.COLUMN_FIRST_NAME, firstName);
+        contentValues.put(ClubOlympusContract.MemberEntry.COLUMN_LAST_NAME, lastName);
+        contentValues.put(ClubOlympusContract.MemberEntry.COLUMN_SPORT, sport);
+        contentValues.put(ClubOlympusContract.MemberEntry.COLUMN_GENDER, gender);
+
+        //разрешаем добавление
+        ContentResolver contentResolver = getContentResolver();
+        Uri uri = contentResolver.insert(ClubOlympusContract.MemberEntry.CONTENT_URI, contentValues);
+
+        //делаем проверку на наличие контента
+        if (uri == null){
+            Toast.makeText(this,"Вставка данных в таблицу не получилось",Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(this,"Данные сохранены",Toast.LENGTH_LONG).show();
+        }
+
     }
 }

@@ -7,10 +7,13 @@ import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import com.example.clubolympus.MainActivity;
 
 //класс для передачин информации в базу данных, КРУД запросы к ней
 //Uri = доступ к какому то элементу или элементам
@@ -54,7 +57,7 @@ public class OlympusContentProvider extends ContentProvider {
                 cursor = db.query(ClubOlympusContract.MemberEntry.TABLE_NAME, projection, selection,
                         selectionArgs, null, null, sortOrder);
                 break;
-                
+
             case MEMBER_ID:
                 selection = ClubOlympusContract.MemberEntry._ID + "=?";
                 selectionArgs = new String[]{String.valueOf(ContentUris.parseId(uri))};
@@ -63,16 +66,39 @@ public class OlympusContentProvider extends ContentProvider {
                 break;
 
             default:
-                Toast.makeText(getContext(),"Неверный URI", Toast.LENGTH_LONG).show();
+                Toast.makeText(getContext(), "Неверный URI", Toast.LENGTH_LONG).show();
                 throw new IllegalArgumentException("Ошибка " + uri);
 
         }
         return cursor;
     }
 
+
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        return null;
+
+        SQLiteDatabase db = dbOpenHelper.getWritableDatabase();
+        int match = uriMatcher.match(uri);
+
+        //в зависимости что введено возвращаем резульат
+        switch (match) {
+            case MEMBERS:
+                //вставляем строку в базу данных
+                long id = db.insert(ClubOlympusContract.MemberEntry.TABLE_NAME, null, values);
+                //роверяем на заполненность, если не ок - выдаем -1 и не вставляем возвращая нул
+                if (id == - 1){
+                    //выводим в лог
+                    Log.e("insertMethod", "Вставка данных в таблицу не получилось" + uri);
+                    return null;
+                }
+                return ContentUris.withAppendedId(uri, id);
+
+
+            default:
+                throw new IllegalArgumentException("Вставка данных в таблицу не получилось" + uri);
+
+        }
+
     }
 
     @Override
