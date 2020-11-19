@@ -70,6 +70,9 @@ public class OlympusContentProvider extends ContentProvider {
                 throw new IllegalArgumentException("Ошибка " + uri);
 
         }
+
+        cursor.setNotificationUri(getContext().getContentResolver(), uri);
+
         return cursor;
     }
 
@@ -114,6 +117,10 @@ public class OlympusContentProvider extends ContentProvider {
                     Log.e("insertMethod", "Вставка данных в таблицу не получилось" + uri);
                     return null;
                 }
+
+
+                getContext().getContentResolver().notifyChange(uri, null);
+
                 return ContentUris.withAppendedId(uri, id);
 
 
@@ -135,21 +142,31 @@ public class OlympusContentProvider extends ContentProvider {
 
         //обращаемся к юрай и возвращаем его метод
         int match = uriMatcher.match(uri);
+
+        int rowsDeleted;
+
         //в зависимости что введено возвращаем резульат
         switch (match) {
             case MEMBERS:
 
-                return db.delete(ClubOlympusContract.MemberEntry.TABLE_NAME, selection, selectionArgs);
+                rowsDeleted = db.delete(ClubOlympusContract.MemberEntry.TABLE_NAME, selection, selectionArgs);
+                break;
 
             case MEMBER_ID:
                 selection = ClubOlympusContract.MemberEntry._ID + "=?";
                 selectionArgs = new String[]{String.valueOf(ContentUris.parseId(uri))};
-                return db.delete(ClubOlympusContract.MemberEntry.TABLE_NAME, selection, selectionArgs);
+
+                rowsDeleted = db.delete(ClubOlympusContract.MemberEntry.TABLE_NAME, selection, selectionArgs);
+                break;
 
             default:
                 throw new IllegalArgumentException("Удалено " + uri);
 
         }
+        if (rowsDeleted != 0) {
+            getContext().getContentResolver().notifyChange(uri, null);
+        }
+        return rowsDeleted;
     }
 
 
@@ -195,21 +212,31 @@ public class OlympusContentProvider extends ContentProvider {
 
         //обращаемся к юрай и возвращаем его метод
         int match = uriMatcher.match(uri);
+
+        int rowsUpdated;
+
         //в зависимости что введено возвращаем резульат
         switch (match) {
             case MEMBERS:
 
-                return db.update(ClubOlympusContract.MemberEntry.TABLE_NAME, values, selection, selectionArgs);
+                rowsUpdated = db.update(ClubOlympusContract.MemberEntry.TABLE_NAME, values, selection, selectionArgs);
+                break;
 
             case MEMBER_ID:
                 selection = ClubOlympusContract.MemberEntry._ID + "=?";
                 selectionArgs = new String[]{String.valueOf(ContentUris.parseId(uri))};
-                return db.update(ClubOlympusContract.MemberEntry.TABLE_NAME, values, selection, selectionArgs);
+
+                rowsUpdated = db.update(ClubOlympusContract.MemberEntry.TABLE_NAME, values, selection, selectionArgs);
+                break;
 
             default:
                 throw new IllegalArgumentException("Изменено " + uri);
 
         }
+        if (rowsUpdated != 0) {
+            getContext().getContentResolver().notifyChange(uri, null);
+        }
+        return rowsUpdated;
     }
 
 

@@ -1,20 +1,32 @@
 package com.example.clubolympus;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.CursorLoader;
+import androidx.loader.content.Loader;
 
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import com.example.clubolympus.data.ClubOlympusContract;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+
+    //онстанта для идентификации
+    private static final int MEMBER_LOADER = 123;
+    //адаптер для лист вью
+    MemberCursorAdapter memberCursorAdapter;
+
 
     //переменная для отображания
-    TextView dataTextView;
+    ListView dataListView;
 
 
     @Override
@@ -23,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         //связываем
-        dataTextView = findViewById(R.id.dataTextView);
+        dataListView = findViewById(R.id.dataListView);
 
         //связываем кнопку
         FloatingActionButton floatingActionButton = findViewById(R.id.floatingActionButton);
@@ -36,66 +48,50 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+
+
+        memberCursorAdapter = new MemberCursorAdapter(this,null,false);
+        dataListView.setAdapter(memberCursorAdapter);
+
+        getSupportLoaderManager().initLoader(MEMBER_LOADER,null,this);
     }
 
-    //запускаем метод прис тарте приложения
+
+    //метод для вспомогательного потока
+    @NonNull
     @Override
-    protected void onStart() {
-        super.onStart();
-        displayData();
-    }
+    public Loader<Cursor> onCreateLoader(int id, @Nullable Bundle args) {
 
-    //показываем данные
-    private void displayData() {
 
         String[] projection = {
                 ClubOlympusContract.MemberEntry._ID,
                 ClubOlympusContract.MemberEntry.COLUMN_FIRST_NAME,
                 ClubOlympusContract.MemberEntry.COLUMN_LAST_NAME,
-                ClubOlympusContract.MemberEntry.COLUMN_GENDER,
                 ClubOlympusContract.MemberEntry.COLUMN_SPORT,
         };
+
         //делаем запрос к базе данных
-        Cursor cursor = getContentResolver().query(
+        CursorLoader cursorLoader = new CursorLoader(this,
                 ClubOlympusContract.MemberEntry.CONTENT_URI,
                 projection, null, null, null
         );
 
-        //используем данные из обьекта
-        dataTextView.setText("Все члены\n\n");
-        dataTextView.append(ClubOlympusContract.MemberEntry._ID + " " +
-                ClubOlympusContract.MemberEntry.COLUMN_FIRST_NAME + " " +
-                ClubOlympusContract.MemberEntry.COLUMN_LAST_NAME + " " +
-                ClubOlympusContract.MemberEntry.COLUMN_GENDER + " " +
-                ClubOlympusContract.MemberEntry.COLUMN_SPORT);
+        return cursorLoader;
+    }
 
-        //олучаем индекс каждой колонки и сохраняем
-        int idColumnIndex = cursor.getColumnIndex(ClubOlympusContract.MemberEntry._ID);
-        int firstNameColumnIndex = cursor.getColumnIndex(ClubOlympusContract.MemberEntry.COLUMN_FIRST_NAME);
-        int lastNameColumnIndex = cursor.getColumnIndex(ClubOlympusContract.MemberEntry.COLUMN_LAST_NAME);
-        int genderColumnIndex = cursor.getColumnIndex(ClubOlympusContract.MemberEntry.COLUMN_GENDER);
-        int sportColumnIndex = cursor.getColumnIndex(ClubOlympusContract.MemberEntry.COLUMN_SPORT);
+    //метод принимает параметры и отображает
+    @Override
+    public void onLoadFinished(@NonNull Loader<Cursor> loader, Cursor cursor) {
 
-        //ереераем все данные курсора
-        while (cursor.moveToNext()){
-            int currentId = cursor.getInt(idColumnIndex);
-            String currentFirstName = cursor.getString(firstNameColumnIndex);
-            String currentLastName = cursor.getString(lastNameColumnIndex);
-            int currentGender = cursor.getInt(genderColumnIndex);
-            String currentSport = cursor.getString(sportColumnIndex);
-
-            //отображаем данные
-            dataTextView.append("\n" +
-                    currentId + " " +
-                    currentFirstName + " " +
-                    currentLastName + " " +
-                    currentGender + " " +
-                    currentSport + " "
-                    );
-        }
-        //закрываем запрос
-        cursor.close();
+        memberCursorAdapter.swapCursor(cursor);
 
     }
 
+    //метод для удаления неправельные запросов
+    @Override
+    public void onLoaderReset(@NonNull Loader<Cursor> loader) {
+
+        memberCursorAdapter.swapCursor(null);
+
+    }
 }
