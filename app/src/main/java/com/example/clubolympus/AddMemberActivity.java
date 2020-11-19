@@ -1,13 +1,22 @@
 package com.example.clubolympus;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NavUtils;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.CursorLoader;
+import androidx.loader.content.Loader;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.preference.DialogPreference;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -16,13 +25,17 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.clubolympus.data.ClubOlympusContract;
 
 import java.util.ArrayList;
 
-public class AddMemberActivity extends AppCompatActivity {
+public class AddMemberActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+
+    private static final int EDIT_MEMBER_LOADER = 111;
+    Uri currentMemberUri;
 
     //переменные для связываения элементов разметки
     private EditText firstNameEditText;
@@ -40,6 +53,19 @@ public class AddMemberActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_member);
+
+
+        Intent intent = getIntent();
+        //устанавливаем заголовок по клику на список
+        currentMemberUri = intent.getData();
+        if (currentMemberUri == null) {
+            setTitle("Добавить члена");
+            //вызываем метод что бы спрятать меню в режиме редатирования
+            invalidateOptionsMenu();
+        } else {
+            setTitle("Редактировать члена");
+            getSupportLoaderManager().initLoader(EDIT_MEMBER_LOADER, null, this);
+        }
 
         //связываем с разметкой
         firstNameEditText = findViewById(R.id.firstNameEditText);
@@ -89,6 +115,7 @@ public class AddMemberActivity extends AppCompatActivity {
                 gender = ClubOlympusContract.MemberEntry.GENDER_UNKNOWN;
             }
         });
+
     }
 
 
@@ -105,9 +132,10 @@ public class AddMemberActivity extends AppCompatActivity {
         switch (item.getItemId()) {
             case R.id.save_member:
                 //ызываем метод при нажатии на кнопку сохранить
-                insertMember();
+                saveMember();
                 return true;
             case R.id.delete_member:
+                showDeleteMemberDialog();
                 return true;
             case R.id.home:
                 NavUtils.navigateUpFromSameTask(this);
@@ -118,12 +146,27 @@ public class AddMemberActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+
+
     //вставляем в таблицу новового члена
-    private void insertMember() {
+    private void saveMember() {
         //получаем значение столбцов, обрезаем пробелы
         String firstName = firstNameEditText.getText().toString().trim();
         String lastName = lastNameEditText.getText().toString().trim();
         String sport = sportEditText.getText().toString().trim();
+
+        //проверяем поля на пустоту
+        if (TextUtils.isEmpty(firstName)){
+            Toast.makeText(this, "Введите имя", Toast.LENGTH_LONG).show();
+            return;
+        } else if (TextUtils.isEmpty(lastName)){
+            Toast.makeText(this, "Введите фамилию", Toast.LENGTH_LONG).show();
+            return;
+        } else if (TextUtils.isEmpty(sport)){
+            Toast.makeText(this, "Введите спорт", Toast.LENGTH_LONG).show();
+        } else if (gender == ClubOlympusContract.MemberEntry.GENDER_UNKNOWN) {
+            Toast.makeText(this, "Введите пол", Toast.LENGTH_LONG).show();
+        }
 
         //создаем обьект и помещаем в него контекнт
         ContentValues contentValues = new ContentValues();
@@ -132,16 +175,143 @@ public class AddMemberActivity extends AppCompatActivity {
         contentValues.put(ClubOlympusContract.MemberEntry.COLUMN_SPORT, sport);
         contentValues.put(ClubOlympusContract.MemberEntry.COLUMN_GENDER, gender);
 
-        //разрешаем добавление
-        ContentResolver contentResolver = getContentResolver();
-        Uri uri = contentResolver.insert(ClubOlympusContract.MemberEntry.CONTENT_URI, contentValues);
 
-        //делаем проверку на наличие контента
-        if (uri == null){
-            Toast.makeText(this,"Вставка данных в таблицу не получилось",Toast.LENGTH_LONG).show();
+        //проверяем на наличие уже сохранненого члена при сохранении о выполяем код
+        if (currentMemberUri == null){
+            //разрешаем добавление
+            ContentResolver contentResolver = getContentResolver();
+            Uri uri = contentResolver.insert(ClubOlympusContract.MemberEntry.CONTENT_URI, contentValues);
+
+            //делаем проверку на наличие контента
+            if (uri == null) {
+                Toast.makeText(this, "Вставка данных в таблицу не получилось", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "Данные сохранены", Toast.LENGTH_LONG).show();
+            }
+
         } else {
-            Toast.makeText(this,"Данные сохранены",Toast.LENGTH_LONG).show();
+            int rowsChanged = getContentResolver().update(currentMemberUri, contentValues,null,null);
+
+            if (rowsChanged == 0){
+                Toast.makeText(this, "охранение данных в таблицу не получилось", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "Данные обновленны", Toast.LENGTH_LONG).show();
+            }
+
         }
 
+    }
+
+    @NonNull
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, @Nullable Bundle args) {
+
+        String[] projection = {
+                ClubOlympusContract.MemberEntry._ID,
+                ClubOlympusContract.MemberEntry.COLUMN_FIRST_NAME,
+                ClubOlympusContract.MemberEntry.COLUMN_LAST_NAME,
+                ClubOlympusContract.MemberEntry.COLUMN_GENDER,
+                ClubOlympusContract.MemberEntry.COLUMN_SPORT
+        };
+        return new CursorLoader(this, currentMemberUri,
+                projection, null, null, null
+        );
+    }
+
+    @Override
+    public void onLoadFinished(@NonNull Loader<Cursor> loader, Cursor cursor) {
+        if (cursor.moveToFirst()) {
+            //получаем индексы столбцов
+            int firstNameColumnIndex = cursor.getColumnIndex(
+                    ClubOlympusContract.MemberEntry.COLUMN_FIRST_NAME
+            );
+            int lastNameColumnIndex = cursor.getColumnIndex(
+                    ClubOlympusContract.MemberEntry.COLUMN_LAST_NAME
+            );
+            int genderColumnIndex = cursor.getColumnIndex(
+                    ClubOlympusContract.MemberEntry.COLUMN_GENDER
+            );
+            int sportColumnIndex = cursor.getColumnIndex(
+                    ClubOlympusContract.MemberEntry.COLUMN_SPORT
+            );
+
+            String firstName = cursor.getString(firstNameColumnIndex);
+            String lastName = cursor.getString(lastNameColumnIndex);
+            int gender = cursor.getInt(genderColumnIndex);
+            String sport = cursor.getString(sportColumnIndex);
+
+
+            //устанавливаем текст в эдиттекст
+            firstNameEditText.setText(firstName);
+            lastNameEditText.setText(lastName);
+            sportEditText.setText(sport);
+
+            switch (gender) {
+                case ClubOlympusContract.MemberEntry.GENDER_MALE:
+                    genderSpinner.setSelection(1);
+                    break;
+                case ClubOlympusContract.MemberEntry.GENDER_FEMALE:
+                    genderSpinner.setSelection(2);
+                    break;
+                case ClubOlympusContract.MemberEntry.GENDER_UNKNOWN:
+                    genderSpinner.setSelection(0);
+                    break;
+            }
+        }
+
+    }
+
+    @Override
+    public void onLoaderReset(@NonNull Loader<Cursor> loader) {
+
+    }
+
+
+
+    //даём возможность удалять в окне редактирования
+    private void showDeleteMemberDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage("Хотите ли вы удалить пользователся?");
+        builder.setPositiveButton("Удалить", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                deleteMember();
+            }
+        });
+        builder.setNegativeButton("Отменить", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+              if (dialog != null){
+                  dialog.dismiss();
+              }
+            }
+        });
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+    }
+    private void deleteMember(){
+        if (currentMemberUri !=null){
+            int rowsDeleted = getContentResolver().delete(currentMemberUri,null,null);
+            if (rowsDeleted == 0){
+                Toast.makeText(this, "Удаление не произошло", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "лен удален", Toast.LENGTH_LONG).show();
+            }
+            finish();
+        }
+    }
+
+
+    //метод для скрытия меню
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        super.onPrepareOptionsMenu(menu);
+
+        if (currentMemberUri == null){
+            MenuItem menuItem = menu.findItem(R.id.delete_member);
+            menuItem.setVisible(false);
+        }
+
+        return true;
     }
 }

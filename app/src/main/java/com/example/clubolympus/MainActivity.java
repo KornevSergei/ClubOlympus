@@ -7,10 +7,13 @@ import androidx.loader.app.LoaderManager;
 import androidx.loader.content.CursorLoader;
 import androidx.loader.content.Loader;
 
+import android.content.ContentUris;
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -34,6 +37,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
+
+
         //связываем
         dataListView = findViewById(R.id.dataListView);
 
@@ -53,11 +59,26 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         memberCursorAdapter = new MemberCursorAdapter(this,null,false);
         dataListView.setAdapter(memberCursorAdapter);
 
+
+        //аём возможность клика по списку и возможность редактировать запуская активти
+        dataListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+
+                Intent intent = new Intent(MainActivity.this, AddMemberActivity.class);
+                Uri currentMemberUri = ContentUris.withAppendedId(ClubOlympusContract.MemberEntry.CONTENT_URI,id);
+                //устанавливаем данные в интент
+                intent.setData(currentMemberUri);
+                startActivity(intent);
+            }
+        });
+
+
         getSupportLoaderManager().initLoader(MEMBER_LOADER,null,this);
     }
 
 
-    //метод для вспомогательного потока
+    //метод для вспомогательного потока извлечения данных
     @NonNull
     @Override
     public Loader<Cursor> onCreateLoader(int id, @Nullable Bundle args) {
