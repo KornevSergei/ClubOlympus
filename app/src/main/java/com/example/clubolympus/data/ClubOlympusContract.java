@@ -1,5 +1,6 @@
 package com.example.clubolympus.data;
 
+import android.content.ContentResolver;
 import android.net.Uri;
 import android.provider.BaseColumns;
 
@@ -22,7 +23,6 @@ public final class ClubOlympusContract {
             Uri.parse(SCHEME + AUTHORITY);
 
 
-
     //информация о членах клуба, создаём константы что бы не ощибиться в будущем, имплементируемся для того что бы не перечеслять айди постоянно
     public static final class MemberEntry implements BaseColumns {
 
@@ -40,6 +40,9 @@ public final class ClubOlympusContract {
 
         public static final Uri CONTENT_URI =
                 Uri.withAppendedPath(BASE_CONTENT_URI, PATH_MEMBERS);
+
+        public static final String CONTENT_MULTIPLE_ITEMS = ContentResolver.CURSOR_DIR_BASE_TYPE + "/" + AUTHORITY + "/" + PATH_MEMBERS;
+        public static final String CONTENT_SINGLE_ITEM = ContentResolver.CURSOR_ITEM_BASE_TYPE + "/" + AUTHORITY + "/" + PATH_MEMBERS;
     }
 
 }

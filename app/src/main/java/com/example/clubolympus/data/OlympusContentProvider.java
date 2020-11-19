@@ -3,6 +3,7 @@ package com.example.clubolympus.data;
 import android.content.ContentProvider;
 import android.content.ContentUris;
 import android.content.ContentValues;
+import android.content.Intent;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -66,16 +67,38 @@ public class OlympusContentProvider extends ContentProvider {
                 break;
 
             default:
-                Toast.makeText(getContext(), "Неверный URI", Toast.LENGTH_LONG).show();
                 throw new IllegalArgumentException("Ошибка " + uri);
 
         }
         return cursor;
     }
 
-
+    //метод для добавления в базу данных
     @Override
     public Uri insert(Uri uri, ContentValues values) {
+
+        //делаем проверку на валидность
+        String firstName = values.getAsString(ClubOlympusContract.MemberEntry.COLUMN_FIRST_NAME);
+        if (firstName == null) {
+            throw new IllegalArgumentException("Введите имя!");
+        }
+
+        String lastName = values.getAsString(ClubOlympusContract.MemberEntry.COLUMN_LAST_NAME);
+        if (lastName == null) {
+            throw new IllegalArgumentException("Введите фамилию!");
+        }
+
+        Integer gender = values.getAsInteger(ClubOlympusContract.MemberEntry.COLUMN_GENDER);
+        if (gender == null || !(gender == ClubOlympusContract.MemberEntry.GENDER_UNKNOWN || gender ==
+                ClubOlympusContract.MemberEntry.GENDER_MALE || gender == ClubOlympusContract.MemberEntry.GENDER_FEMALE)) {
+            throw new IllegalArgumentException("Введите пол!");
+        }
+
+        String sport = values.getAsString(ClubOlympusContract.MemberEntry.COLUMN_SPORT);
+        if (sport == null) {
+            throw new IllegalArgumentException("Введите спорт!");
+        }
+
 
         SQLiteDatabase db = dbOpenHelper.getWritableDatabase();
         int match = uriMatcher.match(uri);
@@ -86,7 +109,7 @@ public class OlympusContentProvider extends ContentProvider {
                 //вставляем строку в базу данных
                 long id = db.insert(ClubOlympusContract.MemberEntry.TABLE_NAME, null, values);
                 //роверяем на заполненность, если не ок - выдаем -1 и не вставляем возвращая нул
-                if (id == - 1){
+                if (id == -1) {
                     //выводим в лог
                     Log.e("insertMethod", "Вставка данных в таблицу не получилось" + uri);
                     return null;
@@ -101,19 +124,114 @@ public class OlympusContentProvider extends ContentProvider {
 
     }
 
+
+    //метод для удаления элементов
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
-        return 0;
+
+        //даем возможность вписывать новые данные
+        SQLiteDatabase db = dbOpenHelper.getWritableDatabase();
+
+
+        //обращаемся к юрай и возвращаем его метод
+        int match = uriMatcher.match(uri);
+        //в зависимости что введено возвращаем резульат
+        switch (match) {
+            case MEMBERS:
+
+                return db.delete(ClubOlympusContract.MemberEntry.TABLE_NAME, selection, selectionArgs);
+
+            case MEMBER_ID:
+                selection = ClubOlympusContract.MemberEntry._ID + "=?";
+                selectionArgs = new String[]{String.valueOf(ContentUris.parseId(uri))};
+                return db.delete(ClubOlympusContract.MemberEntry.TABLE_NAME, selection, selectionArgs);
+
+            default:
+                throw new IllegalArgumentException("Удалено " + uri);
+
+        }
     }
 
+
+    //метод изменеия данных
     @Override
     public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
-        return 0;
+
+        //делаем проверку на валидность и доп проверку
+        if (values.containsKey(ClubOlympusContract.MemberEntry.COLUMN_FIRST_NAME)) {
+
+            String firstName = values.getAsString(ClubOlympusContract.MemberEntry.COLUMN_FIRST_NAME);
+            if (firstName == null) {
+                throw new IllegalArgumentException("Введите имя!");
+            }
+        }
+
+        if (values.containsKey(ClubOlympusContract.MemberEntry.COLUMN_LAST_NAME)) {
+            String lastName = values.getAsString(ClubOlympusContract.MemberEntry.COLUMN_LAST_NAME);
+            if (lastName == null) {
+                throw new IllegalArgumentException("Введите фамилию!");
+            }
+        }
+
+        if (values.containsKey(ClubOlympusContract.MemberEntry.COLUMN_GENDER)) {
+            Integer gender = values.getAsInteger(ClubOlympusContract.MemberEntry.COLUMN_GENDER);
+            if (gender == null || !(gender == ClubOlympusContract.MemberEntry.GENDER_UNKNOWN || gender ==
+                    ClubOlympusContract.MemberEntry.GENDER_MALE || gender == ClubOlympusContract.MemberEntry.GENDER_FEMALE)) {
+                throw new IllegalArgumentException("Введите пол!");
+            }
+        }
+
+        if (values.containsKey(ClubOlympusContract.MemberEntry.COLUMN_SPORT)) {
+            String sport = values.getAsString(ClubOlympusContract.MemberEntry.COLUMN_SPORT);
+            if (sport == null) {
+                throw new IllegalArgumentException("Введите спорт!");
+            }
+        }
+
+
+        //даем возможность вписывать новые данные
+        SQLiteDatabase db = dbOpenHelper.getWritableDatabase();
+
+
+        //обращаемся к юрай и возвращаем его метод
+        int match = uriMatcher.match(uri);
+        //в зависимости что введено возвращаем резульат
+        switch (match) {
+            case MEMBERS:
+
+                return db.update(ClubOlympusContract.MemberEntry.TABLE_NAME, values, selection, selectionArgs);
+
+            case MEMBER_ID:
+                selection = ClubOlympusContract.MemberEntry._ID + "=?";
+                selectionArgs = new String[]{String.valueOf(ContentUris.parseId(uri))};
+                return db.update(ClubOlympusContract.MemberEntry.TABLE_NAME, values, selection, selectionArgs);
+
+            default:
+                throw new IllegalArgumentException("Изменено " + uri);
+
+        }
     }
 
+
+    //метод
     @Override
     public String getType(Uri uri) {
-        return null;
+
+        //обращаемся к юрай и возвращаем его метод
+        int match = uriMatcher.match(uri);
+        //в зависимости что введено возвращаем резульат
+        switch (match) {
+            case MEMBERS:
+
+                return ClubOlympusContract.MemberEntry.CONTENT_MULTIPLE_ITEMS;
+
+            case MEMBER_ID:
+                return ClubOlympusContract.MemberEntry.CONTENT_SINGLE_ITEM;
+
+            default:
+                throw new IllegalArgumentException("Неизвестный URI " + uri);
+
+        }
     }
 
 
